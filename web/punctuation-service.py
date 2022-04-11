@@ -73,8 +73,9 @@ def _punctuation_api(values):
         text = values['text']
         result = {}
         result['text'] = model.restore_punctuation(text)
+#       result['text'] = text
         end = datetime.datetime.now()
-        result['time'] = (end-start).microseconds
+        result['time'] = (end-start).microseconds / 1000
         return json_answer(result)
 
     except Exception as exception:
