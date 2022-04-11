@@ -18,16 +18,13 @@
 # Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 # Boston, MA 02111-1307, USA.
 
-
 from __future__ import print_function
 from flask import Flask, request, Response
 from flask_cors import CORS
+from punctuationmodel import PunctuationModel
 import json
 import os
-import sys
-import datetime
 import time
-import humanize
 import logging
 import logging.handlers
 
@@ -64,14 +61,20 @@ def health_api_get():
     health['inference_calls'] = inference_calls
     return health
 
+model = PunctuationModel(punctuation = ",")
 
 def _punctuation_api(values):
     try:
         global inference_calls
+        start = datetime.datetime.now()
 
         inference_calls += 1
 
-
+        text = values['text']
+        result = {}
+        result['text'] = model.restore_punctuation(text)
+        end = datetime.datetime.now()
+        result['time'] = (end-start).microseconds
         return json_answer(result)
 
     except Exception as exception:
