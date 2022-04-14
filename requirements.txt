@@ -2,3 +2,5 @@ flask==2.0.3
 flask_cors==3.0.10
 gunicorn>=20.0.4
 lxml
+transformers==4.18
+torch==1.11
