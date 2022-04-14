@@ -48,11 +48,11 @@ def json_answer(data, status = 200):
     return resp
    
 @app.route('/check', methods=['POST'])
-def metrics_api_post():
+def punctuation_api_post():
     return _punctuation_api(request.form)
 
 @app.route('/check', methods=['GET'])
-def metrics_api_get():
+def punctuation_api_get():
     return _punctuation_api(request.args)
 
 @app.route('/health', methods=['GET'])
