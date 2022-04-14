@@ -28,6 +28,7 @@ import time
 import logging
 import logging.handlers
 import datetime
+import torch
 
 app = Flask(__name__)
 CORS(app)
@@ -59,6 +60,7 @@ def punctuation_api_get():
 def health_api_get():
     health = {}
     health['inference_calls'] = inference_calls
+    health['torch_num_threads'] = torch.get_num_threads()
     return health
 
 model = PunctuationModel(punctuation = ",")
@@ -82,9 +84,16 @@ def _punctuation_api(values):
         logging.error(f"_punctuation_api. Error: {exception}")
         return json_answer({}, 200)
 
+def init():
+    init_logging()
+    if 'THREADS' in os.environ:
+        num_threads = int(os.environ['THREADS'])
+        torch.set_num_threads(num_threads)
+
+
 if __name__ == '__main__':
     app.debug = True
-    init_logging()
+    init()
     app.run()
 else:
-    init_logging()
+    init()
