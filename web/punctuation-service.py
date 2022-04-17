@@ -65,20 +65,33 @@ def health_api_get():
 
 model = PunctuationModel(punctuation = ",")
 
+NEW_LINE = "\n"
+
 def _punctuation_api(values):
     try:
-        global inference_calls
-        start = datetime.datetime.now()
+      global inference_calls
+      start = datetime.datetime.now()
 
-        inference_calls += 1
+      inference_calls += 1
 
-        text = values['text']
-        result = {}
-        result['text'] = model.restore_punctuation(text)
-#       result['text'] = text
-        end = datetime.datetime.now()
-        result['time'] = (end-start).microseconds / 1000
-        return json_answer(result)
+      text = values['text']
+      result = {}
+      has_line = NEW_LINE in text
+      sentences = text.split(NEW_LINE)
+      corrected = ""
+
+      for sentence in sentences:
+        if len(sentence.strip()) > 0:
+          corrected_local = model.restore_punctuation(sentence)
+   #       print(f"Corrected: {corrected_local}")
+          corrected += corrected_local
+        if has_line:
+          corrected += NEW_LINE
+
+      result['text'] = corrected
+      end = datetime.datetime.now()
+      result['time'] = (end-start).microseconds / 1000
+      return json_answer(result)
 
     except Exception as exception:
         logging.error(f"_punctuation_api. Error: {exception}")
