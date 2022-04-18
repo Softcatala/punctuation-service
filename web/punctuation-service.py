@@ -35,8 +35,6 @@ CORS(app)
 
 inference_calls = 0
 total_miliseconds = 0
-total_words = 0
-start_time = time.time()
 
 def init_logging():
     LOGLEVEL = os.environ.get('LOGLEVEL', 'INFO').upper()
@@ -59,8 +57,10 @@ def punctuation_api_get():
 @app.route('/health', methods=['GET'])
 def health_api_get():
     health = {}
+    seconds = total_miliseconds / 1000 if total_miliseconds else 0
     health['inference_calls'] = inference_calls
     health['torch_num_threads'] = torch.get_num_threads()
+    health['average_time_per_request'] =  inference_calls / seconds if seconds else 0
     return health
 
 model = PunctuationModel(punctuation = ",")
@@ -69,7 +69,7 @@ NEW_LINE = "\n"
 
 def _punctuation_api(values):
     try:
-      global inference_calls
+      global inference_calls, total_miliseconds
       start = datetime.datetime.now()
 
       inference_calls += 1
@@ -90,6 +90,7 @@ def _punctuation_api(values):
 
       result['text'] = corrected
       end = datetime.datetime.now()
+      total_miliseconds += (end-start).microseconds
       result['time'] = (end-start).microseconds / 1000
       return json_answer(result)
 
