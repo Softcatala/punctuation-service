@@ -100,9 +100,9 @@ def _punctuation_api(values):
       for sentence in sentences:
         if len(sentence.strip()) > 0:
 
-            if g_cached_enabled and text in g_cache:
+            if g_cached_enabled and sentence in g_cache:
                 hits += 1
-                corrected_local = g_cache[text]
+                corrected_local = g_cache[sentence]
             else:
                 corrected_local = model.restore_punctuation(sentence)
 
@@ -113,7 +113,7 @@ def _punctuation_api(values):
                         g_cache_ttl = time.time()
 
                     misses += 1
-                    g_cache[text] = corrected_local
+                    g_cache[sentence] = corrected_local
 
             corrected += corrected_local
 
