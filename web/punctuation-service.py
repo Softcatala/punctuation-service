@@ -116,9 +116,11 @@ def _punctuation_api(values):
                     g_cache[sentence] = corrected_local
 
             corrected += corrected_local
+        else:
+            corrected += sentence
 
-            if has_line:
-                corrected += NEW_LINE
+        if has_line:
+            corrected += NEW_LINE
 
       time_used = datetime.datetime.now() - start_time
       total_seconds += (time_used).total_seconds()
