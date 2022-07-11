@@ -29,6 +29,12 @@ import logging
 import logging.handlers
 import datetime
 import torch
+import srx_segmenter
+
+srx_filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'segment.srx')
+rules = srx_segmenter.parse(srx_filepath)
+
+
 
 app = Flask(__name__)
 CORS(app)
@@ -71,8 +77,6 @@ def health_api_get():
 
 model = PunctuationModel(punctuation = ",")
 
-NEW_LINE = "\n"
-
 g_cache = {}
 g_cache_ttl = time.time()
 misses = 0
@@ -81,6 +85,35 @@ EXPIRE_CACHE = 30 * 60
 CACHE_ITEMS = 'CACHE_ITEMS'
 g_cached_enabled = (CACHE_ITEMS in os.environ and os.environ[CACHE_ITEMS].lower() == 'false') == False
 print(f"Sentence cache enabled {g_cached_enabled}")
+
+def _has_dot_or_equivalent(text):
+    t = text
+
+    if t[-1:]== '.' or t[-1:] == '…' or t[-1:] == '?' or t[-1:] == '!' or t[-1:] == ':':
+        return True
+
+    if t[-2:] == '.)' or t[-2:] == '."' or t[-2:] == '.\'':
+        return True
+
+    return False
+
+def _ensure_dot_end_of_sentence(text):
+    text = text.rstrip()
+
+    if _has_dot_or_equivalent(text) is False:
+        text += "."
+
+    return text
+
+# Fixes to common prediction mistakes from the model
+def _manual_fixes_to_model_output(prediction):
+    corrected = prediction.replace(",,", ",")
+    corrected = corrected.replace(", perquè ", " perquè ")
+
+    if prediction != corrected:
+        logging.debug(f" corrected: '{corrected}'")
+
+    return corrected
 
 def _punctuation_api(values):
     try:
@@ -92,40 +125,55 @@ def _punctuation_api(values):
       inference_calls += 1
 
       text = values['text']
+      logging.debug(f"input text: '{text}'")
       result = {}
-      has_line = NEW_LINE in text
-      sentences = text.split(NEW_LINE)
-      corrected = ""
 
+      segmenter = srx_segmenter.SrxSegmenter(rules["Catalan"], text)
+      sentences, whitespaces = segmenter.extract()
+
+      corrected_arr = []
       for sentence in sentences:
-        if len(sentence.strip()) > 0:
+          if g_cached_enabled and sentence in g_cache:
+              hits += 1
+              corrected = g_cache[sentence]
+          else:
+              sentence_with_dot = _ensure_dot_end_of_sentence(sentence)
 
-            if g_cached_enabled and sentence in g_cache:
-                hits += 1
-                corrected_local = g_cache[sentence]
-            else:
-                corrected_local = model.restore_punctuation(sentence)
+              added_dot = sentence_with_dot !=sentence
+              if added_dot:
+                logging.debug(f" sentence: '{sentence_with_dot} (dot added)'")
 
-                if g_cached_enabled:
-                    global g_cache_ttl
-                    if time.time() > EXPIRE_CACHE + g_cache_ttl:
-                        g_cache.clear()
-                        g_cache_ttl = time.time()
+              corrected = model.restore_punctuation(sentence_with_dot)
+        #      logging.debug(f" corrected: '{corrected}'")
+        #      logging.debug(f" sentence: '{sentence}'")
 
-                    misses += 1
-                    g_cache[sentence] = corrected_local
+              if added_dot and corrected[-1] == '.':
+                corrected = corrected[:-1]
 
-            corrected += corrected_local
-        else:
-            corrected += sentence
+              corrected = _manual_fixes_to_model_output(corrected)
 
-        if has_line:
-            corrected += NEW_LINE
+              if g_cached_enabled:
+                  global g_cache_ttl
+                  if time.time() > EXPIRE_CACHE + g_cache_ttl:
+                      g_cache.clear()
+                      g_cache_ttl = time.time()
+
+                  misses += 1
+                  g_cache[sentence] = corrected
+
+          corrected_arr.append(corrected)
+
+      corrected = whitespaces[0]
+      for idx in range(0, len(sentences)):
+        corrected += corrected_arr[idx]
+        corrected += whitespaces[idx + 1]
 
       time_used = datetime.datetime.now() - start_time
       total_seconds += (time_used).total_seconds()
       result['text'] = corrected
       result['time'] = str(time_used)
+
+      logging.debug(f"final corrected: '{corrected}'")
       return json_answer(result)
 
     except Exception as exception:
