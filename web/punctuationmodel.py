@@ -1,16 +1,34 @@
-from transformers import pipeline
-import re
+from transformers import pipeline, RobertaForTokenClassification, AutoTokenizer
 import torch
+from torch.quantization import quantize_dynamic
+import torch.nn as nn
+import re
 
 class PunctuationModel():
-    def __init__(self, model = "softcatala/fullstop-catalan-punctuation-prediction", punctuation = ".,;:?") -> None:
-        if torch.cuda.is_available():
-            self.pipe = pipeline("ner",model, grouped_entities=False, device=0)
-        else:
-            self.pipe = pipeline("ner",model, grouped_entities=False)       
+    def __init__(self, model_name = "softcatala/fullstop-catalan-punctuation-prediction", punctuation = ".,;:?") -> None:
 
-        self.model = model
+        self.pipe = self._quantized_pipeline(model_name)
         self.punctuation = punctuation
+
+    def _regular_pipeline(self, model_name):
+        if torch.cuda.is_available():
+            pipe = pipeline("ner", model_name, grouped_entities=False, device=0)
+        else:
+            pipe = pipeline("ner", model_name, grouped_entities=False)
+
+        return pipe
+
+    def _quantized_pipeline(self, model_name):
+        model = (RobertaForTokenClassification.from_pretrained(model_name).to("cpu"))
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        model_quantized = quantize_dynamic(model, {nn.Linear}, dtype=torch.qint8)
+
+        if torch.cuda.is_available():
+            pipe = pipeline("ner", model_quantized, grouped_entities=False, device=0, tokenizer=tokenizer)
+        else:
+            pipe = pipeline("ner", model_quantized, grouped_entities=False, tokenizer=tokenizer)
+
+        return pipe
 
     def preprocess(self,text):
         #remove markers except for markers in numbers
