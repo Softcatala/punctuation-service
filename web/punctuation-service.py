@@ -108,6 +108,8 @@ def _ensure_dot_end_of_sentence(text):
 # Fixes to common prediction mistakes from the model
 def _manual_fixes_to_model_output(prediction):
     corrected = prediction.replace(",,", ",")
+    corrected = corrected.replace(";,", ";")
+    corrected = corrected.replace(":,", ":")
     corrected = corrected.replace(", perquè ", " perquè ")
 
     if prediction != corrected:
