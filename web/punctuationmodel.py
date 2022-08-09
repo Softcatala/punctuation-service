@@ -121,6 +121,7 @@ class PunctuationModel():
         corrected = corrected.replace("Bona tarda,", "Bona tarda")
         corrected = corrected.replace("Bona nit,", "Bona nit")
         corrected = corrected.replace("Bona vesprada,", "Bona vesprada")
+        corrected = corrected.replace("Hola,", "Hola")
 
         if prediction != corrected:
             logging.debug(f" corrected: '{corrected}'")
