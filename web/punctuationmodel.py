@@ -7,7 +7,7 @@ import re
 class PunctuationModel():
     def __init__(self, model_name = "softcatala/fullstop-catalan-punctuation-prediction", punctuation = ".,;:?") -> None:
 
-        self.pipe = self._quantized_pipeline(model_name)
+        self.pipe = self._regular_pipeline(model_name)
         self.punctuation = punctuation
 
     def _regular_pipeline(self, model_name):
@@ -18,6 +18,7 @@ class PunctuationModel():
 
         return pipe
 
+    # While this is twice faster, there is a ~15% drop in accuracy
     def _quantized_pipeline(self, model_name):
         model = (RobertaForTokenClassification.from_pretrained(model_name).to("cpu"))
         tokenizer = AutoTokenizer.from_pretrained(model_name)
