@@ -6,7 +6,7 @@ import re
 import logging
 
 class PunctuationModel():
-    def __init__(self, model_name = "softcatala/fullstop-catalan-punctuation-prediction", punctuation = ".,;:?") -> None:
+    def __init__(self, model_name = "model/", punctuation = ".,;:?") -> None:
 
         self.pipe = self._regular_pipeline(model_name)
         self.punctuation = punctuation
