@@ -118,7 +118,7 @@ class PunctuationModel():
 
         # These are not incorrect but have very low ratio of acceptance by the users
         corrected = corrected.replace("Bon dia,", "Bon dia")
-        corrected = corrected.replace("Bon tarda,", "Bon tarda")
+        corrected = corrected.replace("Bona tarda,", "Bona tarda")
         corrected = corrected.replace("Bona nit,", "Bona nit")
         corrected = corrected.replace("Bona vesprada,", "Bona vesprada")
 
