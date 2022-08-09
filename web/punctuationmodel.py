@@ -3,6 +3,7 @@ import torch
 from torch.quantization import quantize_dynamic
 import torch.nn as nn
 import re
+import logging
 
 class PunctuationModel():
     def __init__(self, model_name = "softcatala/fullstop-catalan-punctuation-prediction", punctuation = ".,;:?") -> None:
@@ -114,6 +115,12 @@ class PunctuationModel():
         corrected = corrected.replace(";,", ";")
         corrected = corrected.replace(":,", ":")
         corrected = corrected.replace(", perquè ", " perquè ")
+
+        # These are not incorrect but have very low ratio of acceptance by the users
+        corrected = corrected.replace("Bon dia,", "Bon dia")
+        corrected = corrected.replace("Bon tarda,", "Bon tarda")
+        corrected = corrected.replace("Bona nit,", "Bona nit")
+        corrected = corrected.replace("Bona vesprada,", "Bona vesprada")
 
         if prediction != corrected:
             logging.debug(f" corrected: '{corrected}'")
