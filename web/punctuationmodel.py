@@ -105,4 +105,17 @@ class PunctuationModel():
 
             result += " "
 
-        return result.strip()
+        result = result.strip()
+        return self._manual_fixes_to_model_output(result)
+
+    # Fixes to common prediction mistakes from the model
+    def _manual_fixes_to_model_output(self, prediction):
+        corrected = prediction.replace(",,", ",")
+        corrected = corrected.replace(";,", ";")
+        corrected = corrected.replace(":,", ":")
+        corrected = corrected.replace(", perquè ", " perquè ")
+
+        if prediction != corrected:
+            logging.debug(f" corrected: '{corrected}'")
+
+        return corrected

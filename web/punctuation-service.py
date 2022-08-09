@@ -105,17 +105,6 @@ def _ensure_dot_end_of_sentence(text):
 
     return text
 
-# Fixes to common prediction mistakes from the model
-def _manual_fixes_to_model_output(prediction):
-    corrected = prediction.replace(",,", ",")
-    corrected = corrected.replace(";,", ";")
-    corrected = corrected.replace(":,", ":")
-    corrected = corrected.replace(", perquè ", " perquè ")
-
-    if prediction != corrected:
-        logging.debug(f" corrected: '{corrected}'")
-
-    return corrected
 
 def _punctuation_api(values):
     try:
@@ -152,7 +141,6 @@ def _punctuation_api(values):
               if added_dot and corrected[-1] == '.':
                 corrected = corrected[:-1]
 
-              corrected = _manual_fixes_to_model_output(corrected)
 
               if g_cached_enabled:
                   global g_cache_ttl
