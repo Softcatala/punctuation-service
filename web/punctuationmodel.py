@@ -44,7 +44,11 @@ class PunctuationModel():
 
     def restore_punctuation(self,text):        
         result = self.predict(self.preprocess(text))
-        return self.prediction_to_text(result)
+        prediction = self.prediction_to_text(result)
+        if self._contains_invalid_prediction(prediction):
+            return text
+
+        return prediction
         
     def overlap_chunks(self,lst, n, stride=0):
         """Yield successive n-sized chunks from lst with stride length of overlap."""
@@ -107,8 +111,7 @@ class PunctuationModel():
 
             result += " "
 
-        result = result.strip()
-        return self._manual_fixes_to_model_output(result)
+        return result.strip()
 
     def _save_fixes_stats(self, fix):
         if fix not in self.fixes_stats:
@@ -118,30 +121,30 @@ class PunctuationModel():
             counter += 1
             self.fixes_stats[fix] = counter
 
-    # Fixes to common prediction mistakes from the model
-    def _manual_fixes_to_model_output(self, prediction):
+    # Check for common prediction mistakes from the model.
+    # If a mistake is found, invalidates the full prediction
+    def _contains_invalid_prediction(self, prediction):
+        invalid = False
 
-        fixes = {
-                ",," : ",",
-                ";," : ";",
-                ":," : ":",
-                ", perquè ": " perquè ",
+        fixes = [
+                ",,",
+                ";,",
+                ":,",
+                ", perquè ",
 
                 # These are not incorrect but have very low ratio of acceptance by the users
-               "Bon dia," : "Bon dia",
-               "Bona tarda," : "Bona tarda",
-               "Bona nit," : "Bona nit",
-               "Bona vesprada," : "Bona vesprada",
-               "Hola," : "Hola",
-        }
+               "bon dia,",
+               "bona tarda,",
+               "bona nit,",
+               "bona vesprada,",
+               "hola,",
+        ]
 
-        corrected = prediction
-        for fix, correction in fixes.items():
-            original = corrected
-            corrected = corrected.replace(fix, correction)
-            if original != corrected:
+        corrected = prediction.lower()
+        for fix in fixes:
+            position = corrected.find(fix)
+            if position != -1:
                 self._save_fixes_stats(fix)
+                invalid = True
 
-        if prediction != corrected:
-            logging.debug(f" corrected: '{corrected}'")
-        return corrected
+        return invalid
