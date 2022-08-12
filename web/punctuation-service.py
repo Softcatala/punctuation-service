@@ -73,6 +73,7 @@ def health_api_get():
     health['cache_misses'] = misses
     health['cache_hits'] = f"{hits} ({phits:.2f}%)"
     health['cache_size'] = len(g_cache)
+    health['fixes_stats'] = model.fixes_stats
     return health
 
 model = PunctuationModel(punctuation = ",")

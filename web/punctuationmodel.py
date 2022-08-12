@@ -10,6 +10,7 @@ class PunctuationModel():
 
         self.pipe = self._regular_pipeline(model_name)
         self.punctuation = punctuation
+        self.fixes_stats = {}
 
     def _regular_pipeline(self, model_name):
         if torch.cuda.is_available():
@@ -109,21 +110,38 @@ class PunctuationModel():
         result = result.strip()
         return self._manual_fixes_to_model_output(result)
 
+    def _save_fixes_stats(self, fix):
+        if fix not in self.fixes_stats:
+            self.fixes_stats[fix] = 1
+        else:
+            counter = self.fixes_stats[fix]
+            counter += 1
+            self.fixes_stats[fix] = counter
+
     # Fixes to common prediction mistakes from the model
     def _manual_fixes_to_model_output(self, prediction):
-        corrected = prediction.replace(",,", ",")
-        corrected = corrected.replace(";,", ";")
-        corrected = corrected.replace(":,", ":")
-        corrected = corrected.replace(", perquè ", " perquè ")
 
-        # These are not incorrect but have very low ratio of acceptance by the users
-        corrected = corrected.replace("Bon dia,", "Bon dia")
-        corrected = corrected.replace("Bona tarda,", "Bona tarda")
-        corrected = corrected.replace("Bona nit,", "Bona nit")
-        corrected = corrected.replace("Bona vesprada,", "Bona vesprada")
-        corrected = corrected.replace("Hola,", "Hola")
+        fixes = {
+                ",," : ",",
+                ";," : ";",
+                ":," : ":",
+                ", perquè ": " perquè ",
+
+                # These are not incorrect but have very low ratio of acceptance by the users
+               "Bon dia," : "Bon dia",
+               "Bona tarda," : "Bona tarda",
+               "Bona nit," : "Bona nit",
+               "Bona vesprada," : "Bona vesprada",
+               "Hola," : "Hola",
+        }
+
+        corrected = prediction
+        for fix, correction in fixes.items():
+            original = corrected
+            corrected = corrected.replace(fix, correction)
+            if original != corrected:
+                self._save_fixes_stats(fix)
 
         if prediction != corrected:
             logging.debug(f" corrected: '{corrected}'")
-
         return corrected
