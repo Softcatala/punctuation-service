@@ -121,10 +121,17 @@ class PunctuationModel():
             counter += 1
             self.fixes_stats[fix] = counter
 
+    HTML_REGEX = re.compile(r"\<(.*?)\>", re.VERBOSE)
     # Check for common prediction mistakes from the model.
     # If a mistake is found, invalidates the full prediction
     def _contains_invalid_prediction(self, prediction):
         invalid = False
+
+        # Some times we get text with HTML tags (paste may be) and we do not predict well
+        matches = self.HTML_REGEX.findall(prediction)
+        if len(matches) > 0:
+            self._save_fixes_stats("html tag")
+            return True
 
         fixes = [
                 ",,",
