@@ -147,9 +147,9 @@ class PunctuationModel():
                "hola,",
         ]
 
-        corrected = prediction.lower()
+        text = prediction.lower()
         for fix in fixes:
-            position = corrected.find(fix)
+            position = text.find(fix)
             if position != -1:
                 self._save_fixes_stats(fix)
                 invalid = True
