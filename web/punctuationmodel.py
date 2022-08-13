@@ -137,14 +137,18 @@ class PunctuationModel():
                 ",,",
                 ";,",
                 ":,",
+                ", —",
                 ", perquè ",
-
+                "a més, a més",
+                ", de" # Com sempre em constesteu de seguida m'ha estranyat.
                 # These are not incorrect but have very low ratio of acceptance by the users
                "bon dia,",
                "bona tarda,",
                "bona nit,",
                "bona vesprada,",
+               "bon vespre,",
                "hola,",
+               "bones,"
         ]
 
         text = prediction.lower()
