@@ -64,7 +64,7 @@ def do_inference(ref_lines, lines, output, file_type, punctuation):
 
 
 if __name__ == "__main__":
-    print("Inference using the same API than the punctuation web service"
+    print("Inference using the same API than the punctuation web service for debugging")
    
     if len(sys.argv) > 1:
         input_file = sys.argv[1]
