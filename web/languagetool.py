@@ -23,11 +23,11 @@ def main():
             if not matches:
                 continue
 
-            matches = [rule for rule in matches]
-                
-            for match in matches:
+            for idx in range (0, len(matches)):
+                match = matches[idx]
                 if match.ruleId == "CA_REMOTE_PUNCTUATION_RULE":
-#                    print(match)
+                    match.replacements[0] = match.replacements[0].replace(",", "*,*")
+                    matches[idx] = match
                     applied = language_tool_python.utils.correct(line, matches)
                     txt_fp.write(f"-- line: {line_num}\n")
                     txt_fp.write(f"{line.strip()}\n" )
