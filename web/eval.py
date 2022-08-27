@@ -33,12 +33,15 @@ def split_source_corpus(plain, plain_comma, plain_nocomma):
             line = fp_plain.readline()
             if not line:
                 break
-                
+
             line = line.strip()
-            if 'Tipus: Sense comas' in line:
+            if len(line) == 0:
+                continue
+
+            if 'Tipus: Sense comes' in line:
                 comma = False
 
-            if len(line) >0 and line[0] == "#":
+            if len(line) > 0 and line[0] == "#":
                  continue
 
             if comma:
@@ -58,8 +61,6 @@ def create_corpus_without_commas(plain, plain_nocomma):
                 break
 
             line = line.strip()
-            if len(line) == 0:
-                continue
                 
             line = line.replace(",", "")
             fp_nocomma.write(line + "\n")
@@ -70,15 +71,16 @@ def diff(reference, hypotesis):
         ref_lines = fp_ref.readlines()
         hypo_lines = fp_hypo.readlines()
         
-        if len(ref_lines) != len(hypo_lines):
-            print(f"Different length - {reference} - {hypotesis}")
-            exit(1)
+#        if len(ref_lines) != len(hypo_lines):
+#            print(f"Different length - {reference} - {hypotesis}")
+#            exit(1)
 
         equal = 0
         diff = 0       
         for idx in range(0, len(ref_lines)):
             ref = ref_lines[idx].strip()
             hyp = hypo_lines[idx].strip()
+            
             if ref == hyp:
                 equal += 1
             else:
@@ -98,9 +100,8 @@ if __name__ == "__main__":
     plain1 = "plain1.ref"
     plain2 = "plain2.ref"
     plain1_source = "plain1.source"
-    plain2_source = "plain2.source"    
+    plain2_source = "plain2.source"
     split_source_corpus(plain, plain1, plain2)
-    
     create_corpus_without_commas(plain1, plain1_source)
     create_corpus_without_commas(plain2, plain2_source)
     
