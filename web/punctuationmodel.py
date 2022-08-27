@@ -125,6 +125,7 @@ class PunctuationModel():
     # Check for common prediction mistakes from the model.
     # If a mistake is found, invalidates the full prediction
     def _contains_invalid_prediction(self, prediction):
+        return False
         invalid = False
 
         # Some times we get text with HTML tags (paste may be) and we do not predict well
