@@ -21,13 +21,21 @@
 import datetime
 import sys
 import os
+from enum import Enum
+
+class Section(Enum):
+    COMMAS = 1
+    NO_COMMAS = 2
+    ERRORS_MODEL = 3
+        
 
 # Source corpus contains parts expected with comma and no comma
 # We split them calculate precision and recall
-def split_source_corpus(plain, plain_comma, plain_nocomma):
+def split_source_corpus(plain, plain_comma, plain_nocomma, plain_modelerr):
 
-    comma = True
-    with open(plain, 'r') as fp_plain, open(plain_comma, 'w') as fp_comma, open(plain_nocomma, 'w') as fp_nocomma:
+    comma = Section.COMMAS
+    
+    with open(plain, 'r') as fp_plain, open(plain_comma, 'w') as fp_comma, open(plain_nocomma, 'w') as fp_nocomma, open(plain_modelerr, 'w') as fp_model_errors:
         while True:
 
             line = fp_plain.readline()
@@ -39,15 +47,20 @@ def split_source_corpus(plain, plain_comma, plain_nocomma):
                 continue
 
             if 'Tipus: Sense comes' in line:
-                comma = False
-
+                comma = Section.NO_COMMAS
+            elif 'Tipus: Errors model' in line:
+                comma = Section.ERRORS_MODEL
+                
             if len(line) > 0 and line[0] == "#":
                  continue
 
-            if comma:
+            if comma == Section.COMMAS:
                 fp = fp_comma
-            else:
+            elif comma == Section.NO_COMMAS:
                 fp = fp_nocomma
+            else:
+#                print(line)
+                fp = fp_model_errors
 
             fp.write(line + "\n")
 
@@ -66,7 +79,7 @@ def create_corpus_without_commas(plain, plain_nocomma):
             fp_nocomma.write(line + "\n")
 
             
-def diff(reference, hypotesis):
+def diff(text, reference, hypotesis):
     with open(reference, 'r') as fp_ref, open(hypotesis, 'r') as fp_hypo, open(hypotesis + ".diff", 'w') as fp_diff:
         ref_lines = fp_ref.readlines()
         hypo_lines = fp_hypo.readlines()
@@ -91,7 +104,7 @@ def diff(reference, hypotesis):
 
         pequal = equal * 100 / (diff+equal)
         pdiff = diff * 100 / (diff+equal) 
-        print(f"Equal {equal} ({pequal:.2f}%), diff {diff} ({pdiff:.2f}%)")
+        print(f"{text} - Good {equal} ({pequal:.2f}%), diff {diff} ({pdiff:.2f}%)")
     
 if __name__ == "__main__":
     print("Evaluate using the evaluation corpus")
@@ -99,14 +112,22 @@ if __name__ == "__main__":
     plain = "plain.ref"
     plain1 = "plain1.ref"
     plain2 = "plain2.ref"
+    plain3 = "plain3.ref"
     plain1_source = "plain1.source"
     plain2_source = "plain2.source"
-    split_source_corpus(plain, plain1, plain2)
+    plain3_source = "plain3.source"    
+    split_source_corpus(plain, plain1, plain2, plain3)
+#    exit(0)
+
     create_corpus_without_commas(plain1, plain1_source)
     create_corpus_without_commas(plain2, plain2_source)
-    
+    create_corpus_without_commas(plain2, plain3_source)
+        
     os.system(f"python3 inference.py {plain1_source}")
     os.system(f"python3 inference.py {plain2_source}")
-
-    diff(plain1, f"{plain1_source}-comas.txt")
-    diff(plain2, f"{plain2_source}-comas.txt")
+    os.system(f"python3 inference.py {plain3_source}")
+    
+    diff("Data set with commas", plain1, f"{plain1_source}-comas.txt")
+    diff("Data set with no commas", plain2, f"{plain2_source}-comas.txt")
+    diff("Data set with model errors", plain3, f"{plain3_source}-comas.txt")
+    
