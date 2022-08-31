@@ -46,9 +46,9 @@ def split_source_corpus(plain, plain_comma, plain_nocomma, plain_modelerr):
             if len(line) == 0:
                 continue
 
-            if 'Tipus: Sense comes' in line:
+            if '@Tipus: Sense comes' in line:
                 comma = Section.NO_COMMAS
-            elif 'Tipus: Errors model' in line:
+            elif '@Tipus: Errors model' in line:
                 comma = Section.ERRORS_MODEL
                 
             if len(line) > 0 and line[0] == "#":
