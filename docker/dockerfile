@@ -1,6 +1,7 @@
 FROM python:3.10.4-slim-bullseye as generate_data
 RUN apt-get update -y && apt-get upgrade -y && apt-get install unzip wget -y
-RUN wget -q  https://www.softcatala.org/pub/softcatala/punctuation/model.zip
+#RUN wget -q  https://www.softcatala.org/pub/softcatala/punctuation/model.zip
+RUN wget -q  https://riuraueditors.cat/pub/model.zip
 RUN unzip model.zip -d /model/
 
 FROM python:3.10.4-slim-bullseye
