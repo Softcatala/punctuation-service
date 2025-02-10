@@ -5,6 +5,7 @@ from pydantic import BaseModel
 import torch
 from transformers import MT5ForConditionalGeneration, MT5Tokenizer
 from collections import OrderedDict
+import datetime
 
 #TODO: health, log, cache
 
@@ -46,6 +47,7 @@ class TextInput(BaseModel):
     sentences: list[str]
 
 def process_sentences(sentences: list[str]) -> list[str]:
+    start_time = datetime.datetime.now()
     uncached_sentences = cache.get_uncached(sentences)
     if uncached_sentences:
         input_ids = tokenizer(uncached_sentences, return_tensors="pt", padding=True, truncation=True, max_length=256).input_ids.to(device)
@@ -54,15 +56,16 @@ def process_sentences(sentences: list[str]) -> list[str]:
         for i in range(len(uncached_sentences)):
             cache.put(uncached_sentences[i], uncached_sentences_corrected[i])
     output_sentences = [cache.get(s) for s in sentences]
-    return output_sentences
+    time_used = datetime.datetime.now() - start_time
+    total_seconds += (time_used).total_seconds()
+    return {"output_sentences": output_sentences, "time": str(time_used)}
 
 # L'entrada del mètode POST és una llista de frases. 
 @app.post("/check")
 def process_text(input_text: TextInput):
     if not input_text.sentences:
         raise HTTPException(status_code=400, detail="Input text list cannot be empty")
-    results = process_sentences(input_text.sentences)
-    return {"output_sentences": results}
+    return process_sentences(input_text.sentences)
 
 # El mètode GET només s'usa per a fer tests, amb una única frase.
 @app.get("/check")
@@ -71,5 +74,5 @@ def process_text(text: str = Query(..., description="Text to check")):
         raise HTTPException(status_code=400, detail="Input text cannot be empty")
     input_text = TextInput(sentences=[])
     input_text.sentences.append(text)
-    results = process_sentences(input_text.sentences)
-    return {"output_sentences": results}
+    return process_sentences(input_text.sentences)
+    
