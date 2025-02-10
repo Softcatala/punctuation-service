@@ -57,7 +57,6 @@ def process_sentences(sentences: list[str]) -> list[str]:
             cache.put(uncached_sentences[i], uncached_sentences_corrected[i])
     output_sentences = [cache.get(s) for s in sentences]
     time_used = datetime.datetime.now() - start_time
-    total_seconds += (time_used).total_seconds()
     return {"output_sentences": output_sentences, "time": str(time_used)}
 
 # L'entrada del mètode POST és una llista de frases. 
