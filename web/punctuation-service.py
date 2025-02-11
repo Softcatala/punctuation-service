@@ -2,20 +2,19 @@
 # -*- encoding: utf-8 -*-
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
-import torch
-from transformers import MT5ForConditionalGeneration, MT5Tokenizer
+from transformers import MT5Tokenizer
+import ctranslate2
 from collections import OrderedDict
 import datetime
 
-#TODO: health, log, cache
+#TODO: health, log
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 app = FastAPI()
 
-model_name = "model/"
+model_name = "model"
 tokenizer = MT5Tokenizer.from_pretrained(model_name)
-model = MT5ForConditionalGeneration.from_pretrained(model_name).to(device)
+model = ctranslate2.Translator(model_name, device="cpu")
 
 class LRUCache:
     def __init__(self, capacity: int):
@@ -49,10 +48,13 @@ class TextInput(BaseModel):
 def process_sentences(sentences: list[str]) -> list[str]:
     start_time = datetime.datetime.now()
     uncached_sentences = cache.get_uncached(sentences)
+    uncached_sentences_corrected = []
     if uncached_sentences:
-        input_ids = tokenizer(uncached_sentences, return_tensors="pt", padding=True, truncation=True, max_length=256).input_ids.to(device)
-        outputs = model.generate(input_ids, max_length=300)
-        uncached_sentences_corrected = [tokenizer.decode(output, skip_special_tokens=True, clean_up_tokenization_spaces=True) for output in outputs]
+        inputs = [tokenizer.convert_ids_to_tokens(tokenizer.encode(sentence, add_special_tokens=True)) for sentence in uncached_sentences]
+        results = model.translate_batch(inputs, max_decoding_length=300)
+        for result in results:
+            decoded_text = tokenizer.decode(tokenizer.convert_tokens_to_ids(result.hypotheses[0]), skip_special_tokens=True)
+            uncached_sentences_corrected.append(decoded_text)
         for i in range(len(uncached_sentences)):
             cache.put(uncached_sentences[i], uncached_sentences_corrected[i])
     output_sentences = [cache.get(s) for s in sentences]
