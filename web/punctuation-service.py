@@ -9,12 +9,12 @@ import datetime
 
 #TODO: health, log
 
-
 app = FastAPI()
 
 model_name = "model"
 tokenizer = MT5Tokenizer.from_pretrained(model_name)
-model = ctranslate2.Translator(model_name, device="cpu")
+model = ctranslate2.Translator(model_name, device="cpu", inter_threads=4, intra_threads=2)
+#més precisió, més lent: inter_threads=2, intra_threads=4
 
 class LRUCache:
     def __init__(self, capacity: int):
@@ -51,7 +51,8 @@ def process_sentences(sentences: list[str]) -> list[str]:
     uncached_sentences_corrected = []
     if uncached_sentences:
         inputs = [tokenizer.convert_ids_to_tokens(tokenizer.encode(sentence, add_special_tokens=True)) for sentence in uncached_sentences]
-        results = model.translate_batch(inputs, max_decoding_length=300)
+        results = model.translate_batch(inputs, max_decoding_length=300, batch_type="examples", beam_size=2, use_vmap=True)
+        # , max_batch_size=64, beam_size=4 (més precisió). beam_size=1 (més ràpid)
         for result in results:
             decoded_text = tokenizer.decode(tokenizer.convert_tokens_to_ids(result.hypotheses[0]), skip_special_tokens=True)
             uncached_sentences_corrected.append(decoded_text)
