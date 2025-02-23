@@ -13,7 +13,7 @@ app = FastAPI()
 
 model_name = "model"
 tokenizer = MT5Tokenizer.from_pretrained(model_name)
-model = ctranslate2.Translator(model_name, device="cpu", inter_threads=4, intra_threads=2)
+model = ctranslate2.Translator(model_name, device="cpu", inter_threads=2, intra_threads=6)
 #més precisió, més lent: inter_threads=2, intra_threads=4
 
 class LRUCache:
