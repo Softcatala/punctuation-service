@@ -6,6 +6,7 @@ from transformers import MT5Tokenizer
 import ctranslate2
 from collections import OrderedDict
 import datetime
+import os
 
 #TODO: health, log
 
@@ -15,6 +16,15 @@ model_name = "model"
 tokenizer = MT5Tokenizer.from_pretrained(model_name)
 model = ctranslate2.Translator(model_name, device="cpu", inter_threads=2, intra_threads=6)
 #més precisió, més lent: inter_threads=2, intra_threads=4
+
+def get_model():
+    inter_threads = int(os.environ.get('CTRANSLATE_INTER_THREADS', 2))
+    intra_threads = int(os.environ.get('CTRANSLATE_INTRA_THREADS', 6))
+    device = os.environ.get('DEVICE', "cpu")
+    print(f"device: {device}, inter_threads: {inter_threads}, intra_threads: {intra_threads}")
+    return ctranslate2.Translator(model_name, device="cpu", inter_threads=inter_threads, intra_threads=intra_threads)
+
+model = get_model()
 
 class LRUCache:
     def __init__(self, capacity: int):
