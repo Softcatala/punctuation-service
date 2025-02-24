@@ -5,7 +5,7 @@ RUN wget -q  https://riuraueditors.cat/pub/model.zip
 RUN unzip model.zip -d /model/
 
 FROM python:3.12.9-slim-bookworm
-RUN apt-get update -y && apt-get upgrade -y && apt-get install gcc -y 
+RUN apt-get update -y && apt-get upgrade -y
 RUN pip install --upgrade pip
 
 COPY --from=generate_data model/* /srv/web/model/
