@@ -7,9 +7,13 @@ import ctranslate2
 from collections import OrderedDict
 import datetime
 import os
-
+import psutil
 #TODO: health, log
 
+calls = 0
+total_seconds = 0
+total_words = 0
+cached_sentences = 0
 app = FastAPI()
 
 model_name = "model"
@@ -54,6 +58,9 @@ class TextInput(BaseModel):
     sentences: list[str]
 
 def process_sentences(sentences: list[str]) -> list[str]:
+    global calls, total_seconds, total_words, cached_sentences
+
+    calls +=1
     start_time = datetime.datetime.now()
     uncached_sentences = cache.get_uncached(sentences)
     uncached_sentences_corrected = []
@@ -66,8 +73,14 @@ def process_sentences(sentences: list[str]) -> list[str]:
             uncached_sentences_corrected.append(decoded_text)
         for i in range(len(uncached_sentences)):
             cache.put(uncached_sentences[i], uncached_sentences_corrected[i])
+    else:
+        cached_sentences += 1
     output_sentences = [cache.get(s) for s in sentences]
     time_used = datetime.datetime.now() - start_time
+
+    total_seconds += (time_used).total_seconds()
+    words = sum(len(s.split()) for s in sentences)
+    total_words += words
     return {"output_sentences": output_sentences, "time": str(time_used)}
 
 # L'entrada del mètode POST és una llista de frases. 
@@ -75,6 +88,7 @@ def process_sentences(sentences: list[str]) -> list[str]:
 def process_text(input_text: TextInput):
     if not input_text.sentences:
         raise HTTPException(status_code=400, detail="Input text list cannot be empty")
+
     return process_sentences(input_text.sentences)
 
 # El mètode GET només s'usa per a fer tests, amb una única frase.
@@ -86,3 +100,14 @@ def process_text(text: str = Query(..., description="Text to check")):
     input_text.sentences.append(text)
     return process_sentences(input_text.sentences)
     
+@app.get('/health')
+def health_get():
+    health = {}
+    rss = psutil.Process(os.getpid()).memory_info().rss // 1024 ** 2
+    health['id'] = os.getpid()
+    health['rss'] = f"{rss} MB"
+    health['average_time_per_request'] = total_seconds / calls if calls else 0
+    health['calls'] = calls
+    health['cached_sentences'] = cached_sentences
+    health['words_per_second'] = total_words / total_seconds if total_seconds else 0
+    return health       

@@ -4,3 +4,4 @@ fastapi==0.115.8
 uvloop==0.21.0
 sentencepiece==0.2.0
 ctranslate2==4.5.0
+psutil
