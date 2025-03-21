@@ -10,6 +10,7 @@ import os
 import psutil
 import logging
 import logging.handlers
+from fastapi.responses import FileResponse
 
 calls = 0
 total_seconds = 0
@@ -20,11 +21,11 @@ app = FastAPI()
 model_name = "model"
 tokenizer = MT5Tokenizer.from_pretrained(model_name)
 
+logfile = os.path.join(os.environ.get("LOGDIR", ""), "puntuation-service.log")
+
 def init_logging():
-    LOGDIR = os.environ.get("LOGDIR", "")
     LOGLEVEL = os.environ.get("LOGLEVEL", "INFO").upper()
     logger = logging.getLogger()
-    logfile = os.path.join(LOGDIR, "puntuation-service.log")
     hdlr = logging.handlers.RotatingFileHandler(
         logfile, maxBytes=1024 * 1024, backupCount=1
     )
@@ -137,3 +138,16 @@ def health_get():
     health['cached_sentences'] = cached_sentences
     health['words_per_second'] = total_words / total_seconds if total_seconds else 0
     return health
+
+@app.get('/download-log')
+def download_log(code: str = None):
+
+    CODE = os.environ.get("DOWNLOAD_CODE", "")
+    if len(CODE) > 0 and code != CODE:
+        raise HTTPException(status_code=401)
+
+    if os.path.exists(logfile):
+        return FileResponse(logfile, media_type='application/octet-stream', filename='puntuation-service.log')
+    else:
+        raise HTTPException(status_code=404, detail="Log file not found")
+    
