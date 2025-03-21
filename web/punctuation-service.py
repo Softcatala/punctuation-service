@@ -102,7 +102,7 @@ def process_sentences(sentences: list[str]) -> list[str]:
     num_cached_sentences = len(sentences) - num_uncached_sentences
 
     total_cached_sentences += num_cached_sentences
-    total_uncached_sentences += num_cached_sentences
+    total_uncached_sentences += num_uncached_sentences
 
     output_sentences = [cache.get(s) for s in sentences]
     time_used = datetime.datetime.now() - start_time
