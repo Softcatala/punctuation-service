@@ -15,7 +15,8 @@ from fastapi.responses import FileResponse
 calls = 0
 total_seconds = 0
 total_words = 0
-cached_sentences = 0
+total_cached_sentences = 0
+total_uncached_sentences = 0
 app = FastAPI()
 
 model_name = "model"
@@ -81,14 +82,13 @@ class TextInput(BaseModel):
     sentences: list[str]
 
 def process_sentences(sentences: list[str]) -> list[str]:
-    global calls, total_seconds, total_words, cached_sentences
+    global calls, total_seconds, total_words, total_cached_sentences, total_uncached_sentences
 
     calls +=1
     start_time = datetime.datetime.now()
     uncached_sentences = cache.get_uncached(sentences)
     uncached_sentences_corrected = []
     if uncached_sentences:
-        cached = False
         inputs = [tokenizer.convert_ids_to_tokens(tokenizer.encode(sentence, add_special_tokens=True)) for sentence in uncached_sentences]
         results = model.translate_batch(inputs, max_decoding_length=300, batch_type="examples", beam_size=2, use_vmap=True)
         # , max_batch_size=64, beam_size=4 (més precisió). beam_size=1 (més ràpid)
@@ -97,17 +97,21 @@ def process_sentences(sentences: list[str]) -> list[str]:
             uncached_sentences_corrected.append(decoded_text)
         for i in range(len(uncached_sentences)):
             cache.put(uncached_sentences[i], uncached_sentences_corrected[i])
-    else:
-        cached_sentences += 1
-        cached = True
+    
+    num_uncached_sentences = len(uncached_sentences)
+    num_cached_sentences = len(sentences) - num_uncached_sentences
+
+    total_cached_sentences += num_cached_sentences
+    total_uncached_sentences += num_cached_sentences
 
     output_sentences = [cache.get(s) for s in sentences]
     time_used = datetime.datetime.now() - start_time
 
     total_seconds += (time_used).total_seconds()
     words = sum(len(s.split()) for s in sentences)
+    words_in_uncached_sentences = sum(len(s.split()) for s in uncached_sentences) if uncached_sentences else 0
     total_words += words
-    logging.debug(f"Words {words}, time {time_used}, cached {cached}")
+    logging.debug(f"words_total {words}, words_in_uncached_sentences {words_in_uncached_sentences}, time {time_used}, cached_sentences {num_cached_sentences}, uncached_sentences {num_uncached_sentences}")
     return {"output_sentences": output_sentences, "time": str(time_used)}
 
 # L'entrada del mètode POST és una llista de frases. 
@@ -135,7 +139,8 @@ def health_get():
     health['rss'] = f"{rss} MB"
     health['average_time_per_request'] = total_seconds / calls if calls else 0
     health['calls'] = calls
-    health['cached_sentences'] = cached_sentences
+    health['cached_sentences'] = total_cached_sentences
+    health['uncached_sentences'] = total_uncached_sentences
     health['words_per_second'] = total_words / total_seconds if total_seconds else 0
     return health
 
