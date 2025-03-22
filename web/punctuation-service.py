@@ -111,7 +111,7 @@ def process_sentences(sentences: list[str]) -> list[str]:
     words = sum(len(s.split()) for s in sentences)
     words_in_uncached_sentences = sum(len(s.split()) for s in uncached_sentences) if uncached_sentences else 0
     total_words += words
-    logging.debug(f"words_total {words}, words_in_uncached_sentences {words_in_uncached_sentences}, time {time_used}, cached_sentences {num_cached_sentences}, uncached_sentences {num_uncached_sentences}")
+    logging.debug(f"words_total {words}, words_in_uncached_sentences {words_in_uncached_sentences}, time {time_used}, cached_sentences {num_cached_sentences}, uncached_sentences {num_uncached_sentences}, pid {os.getpid()}")
     return {"output_sentences": output_sentences, "time": str(time_used)}
 
 # L'entrada del mètode POST és una llista de frases. 
