@@ -11,6 +11,14 @@ import psutil
 import logging
 import logging.handlers
 from fastapi.responses import FileResponse
+from tempfile import NamedTemporaryFile
+import tarfile
+from logsetup import LogSetup
+
+
+logsetup = LogSetup()
+logsetup.init_logging()
+
 
 calls = 0
 total_seconds = 0
@@ -22,26 +30,7 @@ app = FastAPI()
 model_name = "model"
 tokenizer = MT5Tokenizer.from_pretrained(model_name)
 
-logfile = os.path.join(os.environ.get("LOGDIR", ""), "puntuation-service.log")
 
-def init_logging():
-    LOGLEVEL = os.environ.get("LOGLEVEL", "INFO").upper()
-    logger = logging.getLogger()
-    hdlr = logging.handlers.RotatingFileHandler(
-        logfile, maxBytes=1024 * 1024, backupCount=1
-    )
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-    hdlr.setFormatter(formatter)
-    logger.addHandler(hdlr)
-    logger.setLevel(LOGLEVEL)
-
-    console = logging.StreamHandler()
-    console.setLevel(LOGLEVEL)
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-    console.setFormatter(formatter)
-    logger.addHandler(console)
-
-init_logging()
 
 def get_model():
     inter_threads = int(os.environ.get('CTRANSLATE_INTER_THREADS', 2))
@@ -150,9 +139,15 @@ def download_log(code: str = None):
     CODE = os.environ.get("DOWNLOAD_CODE", "")
     if len(CODE) > 0 and code != CODE:
         raise HTTPException(status_code=401)
+        
+    log_files = logsetup.get_logfiles()
 
-    if os.path.exists(logfile):
-        return FileResponse(logfile, media_type='application/octet-stream', filename='puntuation-service.log')
-    else:
-        raise HTTPException(status_code=404, detail="Log file not found")
-    
+    if not log_files:
+        raise HTTPException(status_code=404, detail="No log files found")
+
+    with NamedTemporaryFile(delete=False, mode='wb') as temp_gzip:
+        with tarfile.open(temp_gzip.name, 'w:gz') as tar:
+            for log_file in log_files:
+                tar.add(log_file, arcname=os.path.basename(log_file))
+
+        return FileResponse(temp_gzip.name, media_type='application/gzip', filename='punctuation-service-logs.tar.gz')
