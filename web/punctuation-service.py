@@ -37,7 +37,7 @@ def get_model():
     intra_threads = int(os.environ.get('CTRANSLATE_INTRA_THREADS', 6))
     device = os.environ.get('DEVICE', "cpu")
     logging.info(f"device: {device}, inter_threads: {inter_threads}, intra_threads: {intra_threads}")
-    return ctranslate2.Translator(model_name, device="cpu", inter_threads=inter_threads, intra_threads=intra_threads)
+    return ctranslate2.Translator(model_name, device=device, inter_threads=inter_threads, intra_threads=intra_threads)
 
 model = get_model()
 
