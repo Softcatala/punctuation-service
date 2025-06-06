@@ -4,9 +4,16 @@ RUN apt-get update -y && apt-get upgrade -y && apt-get install unzip wget -y
 RUN wget -q  https://riuraueditors.cat/pub/model.zip
 RUN unzip model.zip -d /model/
 
-FROM python:3.12.9-slim-bookworm
+FROM nvidia/cuda:12.3.1-base-ubuntu22.04
 RUN apt-get update -y && apt-get upgrade -y
-RUN pip install --upgrade pip
+RUN apt-get install python3-pip python3-dev -y --no-install-recommends
+
+# Solve errors:
+# - Error: Unable to load any of {libcudnn_ops.so.9.1.0, libcudnn_ops.so.9.1, libcudnn_ops.so.9, libcudnn_ops.so}
+# - Error: RuntimeError: Library libcublas.so.12 is not found or cannot be loaded
+
+RUN apt-get install libcudnn9-cuda-12 libcublas-12-3 -y
+
 
 COPY --from=generate_data model/* /srv/web/model/
 
