@@ -26,6 +26,7 @@ total_words = 0
 total_cached_sentences = 0
 total_uncached_sentences = 0
 app = FastAPI()
+start_time = datetime.datetime.now()
 
 model_name = "model"
 tokenizer = MT5Tokenizer.from_pretrained(model_name)
@@ -131,6 +132,7 @@ def health_get():
     health['cached_sentences'] = total_cached_sentences
     health['uncached_sentences'] = total_uncached_sentences
     health['words_per_second'] = total_words / total_seconds if total_seconds else 0
+    health['uptime'] = str(datetime.datetime.now() - start_time).split('.')[0]
     return health
 
 @app.get('/download-log')
