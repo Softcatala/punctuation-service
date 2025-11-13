@@ -37,8 +37,9 @@ def get_model():
     inter_threads = int(os.environ.get('CTRANSLATE_INTER_THREADS', 2))
     intra_threads = int(os.environ.get('CTRANSLATE_INTRA_THREADS', 6))
     device = os.environ.get('DEVICE', "cpu")
-    logging.info(f"device: {device}, inter_threads: {inter_threads}, intra_threads: {intra_threads}")
-    return ctranslate2.Translator(model_name, device=device, inter_threads=inter_threads, intra_threads=intra_threads)
+    compute_type = os.environ.get("COMPUTE_TYPE", "int8")
+    logging.info(f"device: {device}, inter_threads: {inter_threads}, intra_threads: {intra_threads}, compute_type: {compute_type}")
+    return ctranslate2.Translator(model_name, device=device, inter_threads=inter_threads, intra_threads=intra_threads, compute_type=compute_type)
 
 model = get_model()
 
