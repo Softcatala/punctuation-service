@@ -23,7 +23,15 @@ logsetup = LogSetup()
 logsetup.init_logging()
 
 
-calls = 0
+calls = {}
+
+def inc_counter(key):
+    global calls
+    value = calls.get(key, 0)
+    value +=1
+    calls[key] = value
+
+
 total_seconds = 0
 total_words = 0
 total_cached_sentences = 0
@@ -117,9 +125,8 @@ class TextInput(BaseModel):
     sentences: list[str]
 
 def process_sentences(sentences: list[str]) -> list[str]:
-    global calls, total_seconds, total_words, total_cached_sentences, total_uncached_sentences
+    global total_seconds, total_words, total_cached_sentences, total_uncached_sentences
 
-    calls +=1
     start_time = datetime.datetime.now()
     uncached_sentences = cache.get_uncached(sentences)
     uncached_sentences_corrected = []
@@ -152,6 +159,7 @@ def process_sentences(sentences: list[str]) -> list[str]:
 # L'entrada del mètode POST és una llista de frases. 
 @app.post("/check")
 async def process_text_post(input_text: TextInput):
+    inc_counter("post_check")
     if not input_text.sentences:
         raise HTTPException(status_code=400, detail="Input text list cannot be empty")
 
@@ -160,6 +168,7 @@ async def process_text_post(input_text: TextInput):
 # El mètode GET només s'usa per a fer tests, amb una única frase.
 @app.get("/check")
 async def process_text_get(text: str = Query(..., description="Text to check")):
+    inc_counter("get_check")
     if not text:
         raise HTTPException(status_code=400, detail="Input text cannot be empty")
     input_text = TextInput(sentences=[])
@@ -168,12 +177,14 @@ async def process_text_get(text: str = Query(..., description="Text to check")):
     
 @app.get('/health')
 async def health_get():
+    inc_counter("health")
+
     health = {}
     rss = psutil.Process(os.getpid()).memory_info().rss // 1024 ** 2
     health['id'] = os.getpid()
     health['rss'] = f"{rss} MB"
-    health['average_time_per_request'] = total_seconds / calls if calls else 0
-    health['calls'] = calls
+    calls_check = calls.get("post_check", 0) + calls.get("get_check", 0)
+    health['average_time_per_request'] = total_seconds / calls_check if calls_check else 0
     health['cached_sentences'] = total_cached_sentences
     health['uncached_sentences'] = total_uncached_sentences
     health['words_per_second'] = total_words / total_seconds if total_seconds else 0
@@ -181,10 +192,13 @@ async def health_get():
     health['too_busy_requests'] = too_busy_requests
     health['requests_had_to_wait'] = requests_had_to_wait
     health['requests_had_to_wait_avg_time'] = requests_had_to_wait_time / requests_had_to_wait if requests_had_to_wait else 0
+    for key, value in calls.items():
+        health[f'method_{key}'] = value
     return health
 
 @app.get('/download-log')
 async def download_log(code: str = None):
+    inc_counter("download")
 
     CODE = os.environ.get("DOWNLOAD_CODE", "")
     if len(CODE) > 0 and code != CODE:
