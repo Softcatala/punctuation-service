@@ -43,6 +43,7 @@ class DropLongWaitingMiddleware(BaseHTTPMiddleware):
             return response
         except asyncio.TimeoutError:
             too_busy_requests += 1
+            logging.warning("Too busy, try later")
             return Response("Too busy, try later", status_code=503)
 
 app.add_middleware(DropLongWaitingMiddleware)
