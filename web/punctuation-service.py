@@ -16,6 +16,7 @@ import tarfile
 from logsetup import LogSetup
 from starlette.middleware.base import BaseHTTPMiddleware
 import asyncio
+from asyncio import Semaphore
 
 logsetup = LogSetup()
 logsetup.init_logging()
@@ -35,16 +36,28 @@ tokenizer = MT5Tokenizer.from_pretrained(model_name)
 too_busy_requests = 0  # Counter for requests dropped due to timeout
 MAX_WAIT_SECONDS = 30   # Max waiting time before returning 503
 
+
+# Limit to N concurrent requests
+MAX_CONCURRENT_REQUESTS = 1
+semaphore = Semaphore(MAX_CONCURRENT_REQUESTS)
+
 class DropLongWaitingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         global too_busy_requests
+        
+        # Try to acquire semaphore with timeout
         try:
-            response = await asyncio.wait_for(call_next(request), timeout=MAX_WAIT_SECONDS)
-            return response
+            await asyncio.wait_for(semaphore.acquire(), timeout=MAX_WAIT_SECONDS)
         except asyncio.TimeoutError:
             too_busy_requests += 1
             logging.warning("Too busy, try later")
             return Response("Too busy, try later", status_code=503)
+        
+        try:
+            response = await call_next(request)
+            return response
+        finally:
+            semaphore.release()            
 
 app.add_middleware(DropLongWaitingMiddleware)
 
