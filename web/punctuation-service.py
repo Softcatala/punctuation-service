@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- encoding: utf-8 -*-
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 from transformers import MT5Tokenizer
 import ctranslate2
@@ -14,7 +14,8 @@ from fastapi.responses import FileResponse
 from tempfile import NamedTemporaryFile
 import tarfile
 from logsetup import LogSetup
-
+from starlette.middleware.base import BaseHTTPMiddleware
+import asyncio
 
 logsetup = LogSetup()
 logsetup.init_logging()
@@ -31,6 +32,20 @@ start_time = datetime.datetime.now()
 model_name = "model"
 tokenizer = MT5Tokenizer.from_pretrained(model_name)
 
+too_busy_requests = 0  # Counter for requests dropped due to timeout
+MAX_WAIT_SECONDS = 30   # Max waiting time before returning 503
+
+class DropLongWaitingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        global too_busy_requests
+        try:
+            response = await asyncio.wait_for(call_next(request), timeout=MAX_WAIT_SECONDS)
+            return response
+        except asyncio.TimeoutError:
+            too_busy_requests += 1
+            return Response("Too busy, try later", status_code=503)
+
+app.add_middleware(DropLongWaitingMiddleware)
 
 
 def get_model():
@@ -107,7 +122,7 @@ def process_sentences(sentences: list[str]) -> list[str]:
 
 # L'entrada del mètode POST és una llista de frases. 
 @app.post("/check")
-def process_text(input_text: TextInput):
+async def process_text_post(input_text: TextInput):
     if not input_text.sentences:
         raise HTTPException(status_code=400, detail="Input text list cannot be empty")
 
@@ -115,7 +130,7 @@ def process_text(input_text: TextInput):
 
 # El mètode GET només s'usa per a fer tests, amb una única frase.
 @app.get("/check")
-def process_text(text: str = Query(..., description="Text to check")):
+async def process_text_get(text: str = Query(..., description="Text to check")):
     if not text:
         raise HTTPException(status_code=400, detail="Input text cannot be empty")
     input_text = TextInput(sentences=[])
@@ -123,7 +138,7 @@ def process_text(text: str = Query(..., description="Text to check")):
     return process_sentences(input_text.sentences)
     
 @app.get('/health')
-def health_get():
+async def health_get():
     health = {}
     rss = psutil.Process(os.getpid()).memory_info().rss // 1024 ** 2
     health['id'] = os.getpid()
@@ -134,10 +149,11 @@ def health_get():
     health['uncached_sentences'] = total_uncached_sentences
     health['words_per_second'] = total_words / total_seconds if total_seconds else 0
     health['uptime'] = str(datetime.datetime.now() - start_time).split('.')[0]
+    health['too_busy_requests'] = too_busy_requests    
     return health
 
 @app.get('/download-log')
-def download_log(code: str = None):
+async def download_log(code: str = None):
 
     CODE = os.environ.get("DOWNLOAD_CODE", "")
     if len(CODE) > 0 and code != CODE:
