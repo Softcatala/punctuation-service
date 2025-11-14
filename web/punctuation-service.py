@@ -36,6 +36,7 @@ tokenizer = MT5Tokenizer.from_pretrained(model_name)
 
 too_busy_requests = 0  # Counter for requests dropped due to timeout
 requests_had_to_wait = 0
+requests_had_to_wait_time = 0
 MAX_WAIT_SECONDS = 30   # Max waiting time before returning 503
 
 
@@ -45,7 +46,7 @@ semaphore = Semaphore(MAX_CONCURRENT_REQUESTS)
 
 class DropLongWaitingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        global too_busy_requests, requests_had_to_wait
+        global too_busy_requests, requests_had_to_wait, requests_had_to_wait_time
         
         # Check if semaphore is immediately available
         had_to_wait = semaphore.locked()
@@ -58,6 +59,10 @@ class DropLongWaitingMiddleware(BaseHTTPMiddleware):
             if had_to_wait:
                 requests_had_to_wait += 1
                 logging.info(f"Request had to wait for {wait_time:.3f} seconds but proceeded successfully")
+                time_used = time.monotonic() - start_time
+                requests_had_to_wait_time += time_used
+  
+                  
         except asyncio.TimeoutError:
             too_busy_requests += 1
             logging.warning("Too busy, try later - timeout exceeded")
@@ -175,6 +180,7 @@ async def health_get():
     health['uptime'] = str(datetime.datetime.now() - start_time).split('.')[0]
     health['too_busy_requests'] = too_busy_requests
     health['requests_had_to_wait'] = requests_had_to_wait
+    health['requests_had_to_wait_avg_time'] = requests_had_to_wait_time / requests_had_to_wait if requests_had_to_wait else 0
     return health
 
 @app.get('/download-log')
