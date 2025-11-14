@@ -17,6 +17,7 @@ from logsetup import LogSetup
 from starlette.middleware.base import BaseHTTPMiddleware
 import asyncio
 from asyncio import Semaphore
+import time
 
 logsetup = LogSetup()
 logsetup.init_logging()
@@ -45,18 +46,18 @@ semaphore = Semaphore(MAX_CONCURRENT_REQUESTS)
 class DropLongWaitingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         global too_busy_requests, requests_had_to_wait
-
-        logging.debug("dispatch")
         
         # Check if semaphore is immediately available
         had_to_wait = semaphore.locked()
+        start_time = time.monotonic()
         
         # Try to acquire semaphore with timeout
         try:
             await asyncio.wait_for(semaphore.acquire(), timeout=MAX_WAIT_SECONDS)
+            wait_time = time.monotonic() - start_time
             if had_to_wait:
                 requests_had_to_wait += 1
-                logging.info("Request had to wait but proceeded successfully")
+                logging.info(f"Request had to wait for {wait_time:.3f} seconds but proceeded successfully")
         except asyncio.TimeoutError:
             too_busy_requests += 1
             logging.warning("Too busy, try later - timeout exceeded")
