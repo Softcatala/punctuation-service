@@ -36,6 +36,8 @@ total_seconds = 0
 total_words = 0
 total_cached_sentences = 0
 total_uncached_sentences = 0
+total_tokens = 0
+total_tokens_processed_ms = 0
 app = FastAPI()
 start_time = datetime.datetime.now()
 
@@ -132,7 +134,14 @@ def process_sentences(sentences: list[str]) -> list[str]:
     uncached_sentences_corrected = []
     if uncached_sentences:
         inputs = [tokenizer.convert_ids_to_tokens(tokenizer.encode(sentence, add_special_tokens=True)) for sentence in uncached_sentences]
+        total_input_tokens = sum(len(tokens) for tokens in inputs)
+        total_tokens+= total_input_tokens
+        
+        start = time.perf_counter() 
         results = model.translate_batch(inputs, max_decoding_length=300, batch_type="examples", beam_size=2, use_vmap=True)
+        end = time.perf_counter()
+        elapsed_ms = (end - start) * 1000
+        total_tokens_processed_ms += elapsed_ms
         # , max_batch_size=64, beam_size=4 (més precisió). beam_size=1 (més ràpid)
         for result in results:
             decoded_text = tokenizer.decode(tokenizer.convert_tokens_to_ids(result.hypotheses[0]), skip_special_tokens=True)
@@ -189,6 +198,7 @@ async def health_get():
     health['uncached_sentences'] = total_uncached_sentences
     health['words_per_second'] = total_words / total_seconds if total_seconds else 0
     health['uptime'] = str(datetime.datetime.now() - start_time).split('.')[0]
+    health['tokens_per_second'] = total_tokens / (total_tokens_processed_ms / 1000)  if total_tokens_processed_ms > 0 else 0
     health['too_busy_requests'] = too_busy_requests
     health['requests_had_to_wait'] = requests_had_to_wait
     health['requests_had_to_wait_avg_time'] = requests_had_to_wait_time / requests_had_to_wait if requests_had_to_wait else 0
