@@ -66,7 +66,7 @@ class DropLongWaitingMiddleware(BaseHTTPMiddleware):
             wait_time = time.monotonic() - start_time
             if had_to_wait:
                 requests_had_to_wait += 1
-                logging.debug(f"Request had to wait for {wait_time:.3f} seconds but proceeded successfully")
+                logging.debug(f"Request had to wait for {wait_time:.3f} seconds")
                 time_used = time.monotonic() - start_time
                 requests_had_to_wait_time += time_used
   
