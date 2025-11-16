@@ -127,7 +127,7 @@ class TextInput(BaseModel):
     sentences: list[str]
 
 def process_sentences(sentences: list[str]) -> list[str]:
-    global total_seconds, total_words, total_cached_sentences, total_uncached_sentences
+    global total_seconds, total_words, total_cached_sentences, total_uncached_sentences, total_tokens, total_tokens_processed_ms
 
     start_time = datetime.datetime.now()
     uncached_sentences = cache.get_uncached(sentences)
